@@ -1,0 +1,29 @@
+import subprocess
+import re
+
+# Run command to get Wi-Fi profiles
+command_output = subprocess.run(["netsh", "wlan", "show", "profiles"], capture_output=True, text=True, encoding="cp850").stdout
+
+# Extract Wi-Fi profile names
+profile_names = re.findall(r"All User Profile\s*:\s*(.*)", command_output)
+
+wifi_list = []
+
+if profile_names:
+    for name in profile_names:
+        wifi_profile = {}
+        profile_info = subprocess.run(["netsh", "wlan", "show", "profile", f'"{name}"'], capture_output=True, text=True, encoding="cp850").stdout
+
+        if "Security key           : Absent" in profile_info:
+            continue
+
+        wifi_profile["ssid"] = name
+        profile_info_pass = subprocess.run(["netsh", "wlan", "show", "profile", f'"{name}"', "key=clear"], capture_output=True, text=True, encoding="cp850").stdout
+        password = re.search(r"Key Content\s*:\s*(.*)", profile_info_pass)
+
+        wifi_profile["password"] = password[1] if password else None
+        wifi_list.append(wifi_profile)
+
+# Print results
+for wifi in wifi_list:
+    print(wifi)
